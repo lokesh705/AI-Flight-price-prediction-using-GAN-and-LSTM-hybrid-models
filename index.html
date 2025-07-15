@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Flight Price Prediction</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #e0f7fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      width: 450px;
+    }
+    h2 {
+      text-align: center;
+      color: #00796b;
+    }
+    label {
+      margin-top: 10px;
+      display: block;
+      font-weight: 600;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 8px;
+      margin-top: 6px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background-color: #00796b;
+      color: white;
+      font-weight: bold;
+      margin-top: 15px;
+      cursor: pointer;
+    }
+
+    /* Modal styling */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background: rgba(0,0,0,0.5);
+    }
+    .modal-content {
+      background: white;
+      margin: 10% auto;
+      padding: 20px;
+      border-radius: 10px;
+      width: 400px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+    .close {
+      color: red;
+      float: right;
+      font-size: 24px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Flight Price Predictor</h2>
+    <form id="predictForm">
+      <label for="duration">Flight Duration (hours)</label>
+      <input type="number" id="duration" step="0.1" required>
+
+      <label for="days_left">Days Left Until Departure</label>
+      <input type="number" id="days_left" required>
+
+      <label for="stops">Number of Stops</label>
+      <select id="stops" required>
+        <option value="0">Non-stop</option>
+        <option value="1">1 Stop</option>
+        <option value="2">2 Stops</option>
+      </select>
+
+      <label for="departure_time">Departure Time</label>
+      <select id="departure_time" required>
+        <option value="departure_time_Morning">Morning</option>
+        <option value="departure_time_Afternoon">Afternoon</option>
+        <option value="departure_time_Evening">Evening</option>
+        <option value="departure_time_Night">Night</option>
+      </select>
+
+      <label for="arrival_time">Arrival Time</label>
+      <select id="arrival_time" required>
+        <option value="arrival_time_Morning">Morning</option>
+        <option value="arrival_time_Afternoon">Afternoon</option>
+        <option value="arrival_time_Evening">Evening</option>
+        <option value="arrival_time_Night">Night</option>
+      </select>
+
+      <label for="airline">Airline</label>
+      <select id="airline">
+        <option value="airline_AirAsia">AirAsia</option>
+        <option value="airline_Air_India">Air India</option>
+        <option value="airline_GO_FIRST">GO_FIRST</option>
+        <option value="airline_Indigo">IndiGo</option>
+        <option value="airline_SpiceJet">SpiceJet</option>
+        <option value="airline_Vistara">Vistara</option>
+      </select>
+
+      <label for="source">Source City</label>
+      <select id="source">
+        <option value="source_city_Bangalore">Bangalore</option>
+        <option value="source_city_Chennai">Chennai</option>
+        <option value="source_city_Delhi">Delhi</option>
+        <option value="source_city_Hyderabad">Hyderabad</option>
+        <option value="source_city_Kolkata">Kolkata</option>
+        <option value="source_city_Mumbai">Mumbai</option>
+      </select>
+
+      <label for="destination">Destination City</label>
+      <select id="destination">
+        <option value="destination_city_Bangalore">Bangalore</option>
+        <option value="destination_city_Chennai">Chennai</option>
+        <option value="destination_city_Delhi">Delhi</option>
+        <option value="destination_city_Hyderabad">Hyderabad</option>
+        <option value="destination_city_Kolkata">Kolkata</option>
+        <option value="destination_city_Mumbai">Mumbai</option>
+      </select>
+
+      <button type="submit">Predict Price</button>
+      <button type="button" onclick="resetForm()">Search Again</button>
+    </form>
+  </div>
+
+  <!-- Modal -->
+  <div id="resultModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h3 id="modal-title">Prediction Result</h3>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('predictForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const duration = parseFloat(document.getElementById('duration').value);
+      const days_left = parseInt(document.getElementById('days_left').value);
+      const stops = parseInt(document.getElementById('stops').value);
+      const airline = document.getElementById('airline').value;
+      const source = document.getElementById('source').value;
+      const destination = document.getElementById('destination').value;
+      const departure_time = document.getElementById('departure_time').value;
+      const arrival_time = document.getElementById('arrival_time').value;
+
+      const requestData = {
+        duration,
+        days_left,
+        stops
+      };
+
+      requestData[airline] = 1;
+      requestData[source] = 1;
+      requestData[destination] = 1;
+      requestData[departure_time] = 1;
+      requestData[arrival_time] = 1;
+
+      try {
+        const res = await fetch("http://127.0.0.1:5000/predict", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(requestData)
+        });
+
+        const data = await res.json();
+
+        document.getElementById("modal-body").innerHTML = `
+          <p><strong>Predicted Price:</strong> ₹${data.predicted_price}</p>
+          <p><strong>Duration:</strong> ${duration} hrs</p>
+          <p><strong>Days Left:</strong> ${days_left}</p>
+          <p><strong>Stops:</strong> ${stops}</p>
+          <p><strong>Airline:</strong> ${airline.replace("airline_", "")}</p>
+          <p><strong>Source:</strong> ${source.replace("source_city_", "")}</p>
+          <p><strong>Destination:</strong> ${destination.replace("destination_city_", "")}</p>
+          <p><strong>Departure:</strong> ${departure_time.replace("departure_time_", "")}</p>
+          <p><strong>Arrival:</strong> ${arrival_time.replace("arrival_time_", "")}</p>
+        `;
+        document.getElementById("resultModal").style.display = "block";
+      } catch (error) {
+        document.getElementById("modal-body").innerHTML = "<p style='color:red;'>Prediction failed.</p>";
+        document.getElementById("resultModal").style.display = "block";
+        console.error(error);
+      }
+    });
+
+    function resetForm() {
+      document.getElementById("predictForm").reset();
+    }
+
+    function closeModal() {
+      document.getElementById("resultModal").style.display = "none";
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      const modal = document.getElementById("resultModal");
+      if (event.target == modal) {
+        modal.style.display = "none";
+      }
+    }
+  </script>
+</body>
+</html>
